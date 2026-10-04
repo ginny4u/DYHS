@@ -135,6 +135,7 @@ h2.sec{font-size:.78rem;letter-spacing:.1em;color:var(--muted);font-weight:600;m
 .rank .r.me{background:var(--accent-soft)}
 .rank .gap{text-align:center;color:var(--muted);font-size:.8rem;padding:2px 0}
 .rank-msg{font-size:.85rem;color:var(--muted);padding:10px 0}
+.rank-msg.go{color:var(--accent);font-weight:600}
 .namebox{display:grid;gap:10px;margin-top:8px}
 .namebox input{font:inherit;font-size:1.15rem;padding:12px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);color:var(--ink);min-width:0}
 .confirm{border:1px solid var(--accent);border-radius:10px;padding:12px;margin-top:12px;display:grid;gap:10px;font-size:.92rem}
@@ -319,17 +320,27 @@ async function loadRank(){
     drawRank(j);
   }catch(e){ if($('#rank')) $('#rank').innerHTML='<div class="rank-msg">순위를 못 불러옴 · 인터넷 연결 확인</div>'; }
 }
-let rankOpen=false;
+// 홈에는 1~3위 + (내가 그 밖이면) 내 바로 위 한 명과 나. 전체 명단은 시트에서만.
 function drawRank(j){
   const list=j.list||[], me=j.me;
   if(!list.length){ $('#rank').innerHTML='<div class="rank-msg">아직 아무도 없음</div>'; return; }
-  const n = rankOpen ? list.length : 3;
-  const row = (x,k)=>`<div class="r ${x.r<=3?'top':''} ${k===me?'me':''}"><span class="no">${x.r}위</span><span class="nm">${esc(x.n)}</span><span class="d">${x.d}개</span></div>`;
-  let h = list.slice(0,n).map(row).join('');
-  if(me!=null && me>=n) h += `<div class="gap">⋯</div>` + row(list[me],me);
-  if(list.length>3) h += `<button class="linkbtn" id="rank-more" type="button">${rankOpen?'접기':'전체 순위 · '+list.length+'명'}</button>`;
-  $('#rank').innerHTML = `<div class="rank">${h}</div>`;
-  const mb=$('#rank-more'); if(mb) mb.onclick=()=>{rankOpen=!rankOpen; drawRank(j);};
+  const row = k=>{ const x=list[k]; return `<div class="r ${x.r<=3?'top':''} ${k===me?'me':''}"><span class="no">${x.r}위</span><span class="nm">${esc(x.n)}</span><span class="d">${x.d}개</span></div>`; };
+  const show = [0,1,2].filter(k=>k<list.length);
+  let above = -1;
+  if(me!=null){ for(let k=me-1;k>=0;k--){ if(list[k].d>list[me].d){ above=k; break; } } }
+  if(me!=null && me>2){ if(above>2) show.push(above); show.push(me); }
+  const ks=[...new Set(show)].sort((a,b)=>a-b);
+  let h=''; ks.forEach((k,n)=>{ if(n && k-ks[n-1]>1) h+='<div class="gap">⋯</div>'; h+=row(k); });
+  // 한 줄 자극: 위 사람까지 몇 개, 1위면 2위와 몇 개 차이
+  let msg='';
+  if(me!=null){
+    const my=list[me];
+    if(above>=0) msg=`${esc(list[above].n)}까지 ${list[above].d-my.d}개`;
+    else { const below=list.find(x=>x.d<my.d); const tied=list.filter(x=>x.d===my.d).length;
+      if(tied>1) msg=`공동 1위 · 1개만 더 하면 단독 1위`;
+      else if(below) msg=`2위 ${esc(below.n)}보다 ${my.d-below.d}개 앞섬`; }
+  }
+  $('#rank').innerHTML = `<div class="rank">${h}</div>${msg?`<div class="rank-msg go">${msg}</div>`:''}`;
 }
 
 /* ---------- 화면: 처음 */
