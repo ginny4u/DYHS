@@ -323,11 +323,11 @@ let rankOpen=false;
 function drawRank(j){
   const list=j.list||[], me=j.me;
   if(!list.length){ $('#rank').innerHTML='<div class="rank-msg">아직 아무도 없음</div>'; return; }
-  const n = rankOpen ? list.length : 5;
+  const n = rankOpen ? list.length : 3;
   const row = (x,k)=>`<div class="r ${x.r<=3?'top':''} ${k===me?'me':''}"><span class="no">${x.r}위</span><span class="nm">${esc(x.n)}</span><span class="d">${x.d}개</span></div>`;
   let h = list.slice(0,n).map(row).join('');
   if(me!=null && me>=n) h += `<div class="gap">⋯</div>` + row(list[me],me);
-  if(list.length>5) h += `<button class="linkbtn" id="rank-more" type="button">${rankOpen?'접기':'전체 순위 · '+list.length+'명'}</button>`;
+  if(list.length>3) h += `<button class="linkbtn" id="rank-more" type="button">${rankOpen?'접기':'전체 순위 · '+list.length+'명'}</button>`;
   $('#rank').innerHTML = `<div class="rank">${h}</div>`;
   const mb=$('#rank-more'); if(mb) mb.onclick=()=>{rankOpen=!rankOpen; drawRank(j);};
 }
