@@ -246,15 +246,21 @@ function startSession(mode){
   if(!list.length) return;
   const now = Date.now();
   // 익힘 단계가 낮고 오래 안 본 낱말부터. 같은 조건이면 무작위.
-  const ranked = shuffle(list).sort((a,b)=>{
-    const pa=P(a.id), pb=P(b.id);
-    if(pa.miss!==pb.miss) return pa.miss? -1:1;
-    if(pa.b!==pb.b) return pa.b-pb.b;
-    return (pa.last||0)-(pb.last||0);
-  });
-  const N = Math.min(store.n, ranked.length);
-  const pick = ranked.slice(0,N);
-  S = {mode, queue: pick.map(it=>makeQ(it)), done:0, right:0, total:pick.length, missed:[], startedAt:now};
+  // 고르는 순서: 틀린 것 → 공부 중(1~3단계, 오래 안 본 것부터)을 판의 2/3까지 → 새 단어 → 나머지
+  // 공부 중인 단어를 먼저 끝까지 밀어 줘야 학습완료가 판마다 조금씩 쌓인다(새 단어만 계속 나오면 한참 동안 0개)
+  const N = Math.min(store.n, list.length);
+  const B = it => P(it.id).b, old = (a,b)=>(P(a.id).last||0)-(P(b.id).last||0);
+  const missL = shuffle(list.filter(it=>P(it.id).miss)).sort(old);
+  const midL  = shuffle(list.filter(it=>!P(it.id).miss && B(it)>=1 && B(it)<=3)).sort(old);
+  const newL  = shuffle(list.filter(it=>!P(it.id).miss && B(it)===0));
+  const doneL = shuffle(list.filter(it=>!P(it.id).miss && B(it)>=4)).sort((a,b)=>B(a)-B(b)||old(a,b));
+  const pick = [];
+  const take = (arr, upto) => { for(const it of arr){ if(pick.length>=upto) break; if(!pick.includes(it)) pick.push(it); } };
+  take(missL, N);
+  take(midL, Math.max(pick.length, Math.ceil(N*2/3)));
+  take(newL, N); take(midL, N); take(doneL, N);
+  shuffle(pick);
+  S = {mode, queue: shuffle(pick).map(it=>makeQ(it)), done:0, right:0, total:pick.length, missed:[], startedAt:now};
   renderQ();
 }
 function answer(ok, extraWhy){
