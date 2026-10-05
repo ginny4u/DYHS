@@ -326,15 +326,15 @@ async function loadRank(){
     drawRank(j);
   }catch(e){ if($('#rank')) $('#rank').innerHTML='<div class="rank-msg">순위를 못 불러옴 · 인터넷 연결 확인</div>'; }
 }
-// 홈에는 1~3위 + (내가 그 밖이면) 내 바로 위 한 명과 나. 전체 명단은 시트에서만.
+// 홈에는 1~5위 + (내가 그 밖이면) 내 바로 위 한 명과 나. 전체 명단은 시트에서만.
 function drawRank(j){
   const list=j.list||[], me=j.me;
   if(!list.length){ $('#rank').innerHTML='<div class="rank-msg">아직 아무도 없음</div>'; return; }
   const row = k=>{ const x=list[k]; return `<div class="r ${x.r<=3?'top':''} ${k===me?'me':''}"><span class="no">${x.r}위</span><span class="nm">${esc(x.n)}</span><span class="d">${x.d}개</span></div>`; };
-  const show = [0,1,2].filter(k=>k<list.length);
+  const show = [0,1,2,3,4].filter(k=>k<list.length);
   let above = -1;
   if(me!=null){ for(let k=me-1;k>=0;k--){ if(list[k].d>list[me].d){ above=k; break; } } }
-  if(me!=null && me>2){ if(above>2) show.push(above); show.push(me); }
+  if(me!=null && me>4){ if(above>4) show.push(above); show.push(me); }
   const ks=[...new Set(show)].sort((a,b)=>a-b);
   let h=''; ks.forEach((k,n)=>{ if(n && k-ks[n-1]>1) h+='<div class="gap">⋯</div>'; h+=row(k); });
   // 한 줄 자극: 위 사람까지 몇 개, 1위면 2위와 몇 개 차이
