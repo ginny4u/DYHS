@@ -328,8 +328,8 @@ async function loadRank(){
     drawRank(j);
   }catch(e){ if($('#rank')) $('#rank').innerHTML='<div class="rank-msg">순위를 못 불러옴 · 인터넷 연결 확인</div>'; }
 }
-// 홈에는 등수 네 줄(같은 등수는 한 줄에 이름을 모아서) + (내가 그 밖이면) 내 바로 위 등수와 내 등수. 전체 명단은 시트에서만.
-const RANK_ROWS = 4;
+// 홈에는 등수 다섯 줄(같은 등수는 한 줄에 이름을 모아서) + (내가 그 밖이면) 그 밑에 내 줄. 전체 명단은 시트에서만.
+const RANK_ROWS = 5;
 function drawRank(j){
   const list=j.list||[], me=j.me;
   if(!list.length){ $('#rank').innerHTML='<div class="rank-msg">아직 아무도 없음</div>'; return; }
@@ -344,7 +344,7 @@ function drawRank(j){
   let above = -1;
   if(me!=null){ for(let k=me-1;k>=0;k--){ if(list[k].d>list[me].d){ above=k; break; } } }
   const myG = me!=null ? gOf(me) : -1;
-  if(myG>=RANK_ROWS){ const aG=gOf(above); if(aG>=RANK_ROWS) show.push(aG); show.push(myG); }
+  if(myG>=RANK_ROWS) show.push(myG);
   const gs=[...new Set(show)].sort((a,b)=>a-b);
   let h=''; gs.forEach((g,n)=>{ if(n && g-gs[n-1]>1) h+='<div class="gap">⋯</div>'; h+=row(G[g]); });
   // 한 줄 자극: 위 등수까지 몇 개, 1위면 2위와 몇 개 차이
