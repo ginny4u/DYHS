@@ -130,7 +130,9 @@ h2.sec{font-size:.78rem;letter-spacing:.1em;color:var(--muted);font-weight:600;m
 .rank .r{display:grid;grid-template-columns:2.4em 1fr auto;gap:8px;align-items:baseline;padding:9px 6px;border-bottom:1px solid var(--rule);font-variant-numeric:tabular-nums}
 .rank .r .no{color:var(--muted);font-weight:600}
 .rank .r.top .no{color:var(--accent)}
-.rank .r .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank .r .nm{font-weight:600;min-width:0;overflow:hidden;line-height:1.55}
+.rank .r .nm>span{white-space:nowrap}
+.rank .r .nm .sep{font-style:normal;font-weight:400;color:var(--muted)}
 .rank .r .d{font-size:.85rem;color:var(--muted)}
 .rank .r.me{background:var(--accent-soft)}
 .rank .gap{text-align:center;color:var(--muted);font-size:.8rem;padding:2px 0}
@@ -326,24 +328,34 @@ async function loadRank(){
     drawRank(j);
   }catch(e){ if($('#rank')) $('#rank').innerHTML='<div class="rank-msg">순위를 못 불러옴 · 인터넷 연결 확인</div>'; }
 }
-// 홈에는 1~5위 + (내가 그 밖이면) 내 바로 위 한 명과 나. 전체 명단은 시트에서만.
+// 홈에는 등수 네 줄(같은 등수는 한 줄에 이름을 모아서) + (내가 그 밖이면) 내 바로 위 등수와 내 등수. 전체 명단은 시트에서만.
+const RANK_ROWS = 4;
 function drawRank(j){
   const list=j.list||[], me=j.me;
   if(!list.length){ $('#rank').innerHTML='<div class="rank-msg">아직 아무도 없음</div>'; return; }
-  const row = k=>{ const x=list[k]; return `<div class="r ${x.r<=3?'top':''} ${k===me?'me':''}"><span class="no">${x.r}위</span><span class="nm">${esc(x.n)}</span><span class="d">${x.d}개</span></div>`; };
-  const show = [0,1,2,3,4].filter(k=>k<list.length);
+  // 같은 등수끼리 한 줄로 묶기 (list는 등수순)
+  const G=[];
+  list.forEach((x,k)=>{ const g=G[G.length-1]; if(g && g.r===x.r) g.ks.push(k); else G.push({r:x.r, d:x.d, ks:[k]}); });
+  const gOf = k => G.findIndex(g=>g.ks.includes(k));
+  const row = g=>{
+    const names = g.ks.map((k,i)=>`<span>${esc(list[k].n)}${i<g.ks.length-1?' <i class="sep">·</i>':''}</span>`).join(' ');
+    return `<div class="r ${g.r<=3?'top':''} ${me!=null&&g.ks.includes(me)?'me':''}"><span class="no">${g.r}위</span><span class="nm">${names}</span><span class="d">${g.d}개</span></div>`; };
+  const show = [...Array(Math.min(RANK_ROWS, G.length)).keys()];
   let above = -1;
   if(me!=null){ for(let k=me-1;k>=0;k--){ if(list[k].d>list[me].d){ above=k; break; } } }
-  if(me!=null && me>4){ if(above>4) show.push(above); show.push(me); }
-  const ks=[...new Set(show)].sort((a,b)=>a-b);
-  let h=''; ks.forEach((k,n)=>{ if(n && k-ks[n-1]>1) h+='<div class="gap">⋯</div>'; h+=row(k); });
-  // 한 줄 자극: 위 사람까지 몇 개, 1위면 2위와 몇 개 차이
+  const myG = me!=null ? gOf(me) : -1;
+  if(myG>=RANK_ROWS){ const aG=gOf(above); if(aG>=RANK_ROWS) show.push(aG); show.push(myG); }
+  const gs=[...new Set(show)].sort((a,b)=>a-b);
+  let h=''; gs.forEach((g,n)=>{ if(n && g-gs[n-1]>1) h+='<div class="gap">⋯</div>'; h+=row(G[g]); });
+  // 한 줄 자극: 위 등수까지 몇 개, 1위면 2위와 몇 개 차이
   let msg='';
   if(me!=null){
     const my=list[me];
-    if(above>=0) msg=`${esc(list[above].n)}까지 ${list[above].d-my.d}개`;
+    if(above>=0){ const ag=G[gOf(above)];
+      msg = ag.ks.length>1 ? `${ag.r}위까지 ${ag.d-my.d}개` : `${esc(list[above].n)}까지 ${ag.d-my.d}개`; }
     else { const below=list.find(x=>x.d<my.d); const tied=list.filter(x=>x.d===my.d).length;
-      if(tied>1) msg=`공동 1위 · 1개만 더 하면 단독 1위`;
+      const total=ITEMS.filter(it=>!it.ref).length;
+      if(tied>1) msg = my.d>=total ? `공동 1위 · ${total}개 다 끝냄` : `공동 1위 · 1개만 더 하면 단독 1위`;
       else if(below) msg=`2위 ${esc(below.n)}보다 ${my.d-below.d}개 앞섬`; }
   }
   $('#rank').innerHTML = `<div class="rank">${h}</div>${msg?`<div class="rank-msg go">${msg}</div>`:''}`;
